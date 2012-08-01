@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/risknat_plugin">
+        <file alias="icons/about">icons/about.png</file>
+    </qresource>
+</RCC>
