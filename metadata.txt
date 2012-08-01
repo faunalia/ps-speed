@@ -1,0 +1,29 @@
+; the next section is mandatory
+[general]
+name=RiskNat
+description=RiskNat plugin
+version=0.0.1
+qgisMinimumVersion=1.5
+
+category=Plugin
+
+; end of mandatory metadata
+
+; start of optional metadata
+author=Giuseppe Sucameli (Faunalia)
+
+changelog=first version
+
+; tags are in comma separated value format, spaces are allowed
+tags=permanent scatterers
+
+homepage=http://www.faunalia.com/
+tracker=http://hub.qgis.org/projects/risknat
+repository=https://github.com/faunalia/risknat
+;repository=http://hub.qgis.org/projects/risknat/repository
+
+; path to a icon within the plugin folder
+icon=icons/logo.png
+
+experimental=True
+deprecated=False
