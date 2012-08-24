@@ -2,8 +2,8 @@
 
 """
 /***************************************************************************
-Name			 	 : RiskNat
-Description          : RiskNat plugin
+Name			 	 : ToolPS
+Description          : ToolPS plugin
 Date                 : Jul 25, 2012 
 copyright            : (C) 2012 by Giuseppe Sucameli (Faunalia)
 email                : brush.tyler@gmail.com
@@ -21,10 +21,10 @@ email                : brush.tyler@gmail.com
 """
 
 def name():
-	return "RiskNat"
+	return "ToolPS"
 
 def description():
-	return "RiskNat plugin "
+	return "ToolPS plugin "
 
 def authorName():
 	return "Giuseppe Sucameli (Faunalia)"
@@ -39,6 +39,6 @@ def qgisMinimumVersion():
 	return "1.5"
 
 def classFactory(iface):
-	from risknat_plugin import RiskNat_Plugin
-	return RiskNat_Plugin(iface)
+	from tool_ps_plugin import ToolPS_Plugin
+	return ToolPS_Plugin(iface)
 

@@ -1,7 +1,7 @@
 ; the next section is mandatory
 [general]
-name=RiskNat
-description=RiskNat plugin
+name=ToolPS
+description=ToolPS plugin
 version=0.0.1
 qgisMinimumVersion=1.5
 
@@ -15,12 +15,12 @@ author=Giuseppe Sucameli (Faunalia)
 changelog=first version
 
 ; tags are in comma separated value format, spaces are allowed
-tags=permanent scatterers
+tags=permanent scatterers,time series
 
 homepage=http://www.faunalia.com/
-tracker=http://hub.qgis.org/projects/risknat
-repository=https://github.com/faunalia/risknat
-;repository=http://hub.qgis.org/projects/risknat/repository
+tracker=http://hub.qgis.org/projects/tool_ps
+repository=https://github.com/faunalia/tool_ps
+;repository=http://hub.qgis.org/projects/tool_ps/repository
 
 ; path to a icon within the plugin folder
 icon=icons/logo.png

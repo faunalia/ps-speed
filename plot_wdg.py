@@ -25,10 +25,9 @@ from PyQt4 import QtGui, QtCore
 # Matplotlib Figure object
 from matplotlib.figure import Figure
 
-from matplotlib.dates import date2num
-from datetime import datetime
-
-from pylab import Line2D, YearLocator, MonthLocator, DayLocator, DateFormatter
+from datetime import datetime, date
+from matplotlib.dates import date2num, num2date, YearLocator, MonthLocator, DayLocator, DateFormatter
+from matplotlib.lines import Line2D
 
 # import the Qt4Agg FigureCanvas object, that binds Figure to
 # Qt4Agg backend. It also inherits from QWidget
@@ -114,12 +113,27 @@ class PlotWdg(FigureCanvasQTAgg):
 		self.info = info if info is not None else []
 		self._dirty = True
 
-	def setTitle(self, title):
-		self.axes.set_title( title or "" )
+	def setTitle(self, title, *args, **kwargs):
+		self.axes.set_title( title or "", *args, **kwargs )
+		self.draw()
 
-	def setLabels(self, xLabel=None, yLabel=None):
-		self.axes.set_xlabel( xLabel or "" )
-		self.axes.set_ylabel( yLabel or "" )
+	def setLabels(self, xLabel=None, yLabel=None, *args, **kwargs):
+		self.axes.set_xlabel( xLabel or "", *args, **kwargs )
+		self.axes.set_ylabel( yLabel or "", *args, **kwargs )
+		self.draw()
+
+	def getLimits(self):
+		xlim = self.axes.get_xlim()
+		is_x_date = isinstance(self.x[0], (datetime, date)) if len(self.x) > 0 else False
+		if is_x_date:
+			xlim = num2date(xlim)
+
+		ylim = self.axes.get_ylim()
+		is_y_date = isinstance(self.y[0], (datetime, date)) if self.y is not None and len(self.y) > 0 else False
+		if is_y_date:
+			ylim = num2date(ylim)
+
+		return xlim, ylim
 
 	def setLimits(self, xlim=None, ylim=None):
 		""" update the chart limits """
@@ -127,13 +141,33 @@ class PlotWdg(FigureCanvasQTAgg):
 			self.axes.set_xlim(xlim)
 		if ylim is not None:
 			self.axes.set_ylim(ylim)
+		self.draw()
+
+	def displayGrids(self, hgrid=False, vgrid=False):
+		self.axes.xaxis.grid(vgrid, 'major')
+		self.axes.yaxis.grid(hgrid, 'major')
+		self.draw()
+
+
+	def _removeItem(self, item):
+		try:
+			self.collections.remove( item )
+		except ValueError:
+			pass
+
+		try:
+			if isinstance(item, (list, tuple, set)):
+				for i in item:
+					i.remove()
+			else:
+				item.remove()
+		except AttributeError:
+			pass
+
 
 	def _clear(self):
 		for item in self.collections:
-			try:
-				item.remove()
-			except AttributeError:
-				pass
+			self._removeItem( item )
 
 		self.collections = []
 
@@ -147,8 +181,8 @@ class PlotWdg(FigureCanvasQTAgg):
 
 
 	def _callPlotFunc(self, plotfunc, x, y=None, *args, **kwargs):
-		is_x_date = isinstance(x[0], datetime) if len(x) > 0 else False
-		is_y_date = isinstance(y[0], datetime) if y is not None and len(y) > 0 else False
+		is_x_date = isinstance(x[0], (datetime, date)) if len(x) > 0 else False
+		is_y_date = isinstance(y[0], (datetime, date)) if y is not None and len(y) > 0 else False
 
 		if is_x_date: 
 			self._setAxisDateFormatter( self.axes.xaxis, x )
@@ -160,9 +194,7 @@ class PlotWdg(FigureCanvasQTAgg):
 		if y is not None:
 			items = getattr(self.axes, plotfunc)(x, y, *args, **kwargs)
 		else:
-			n, bins, patches = getattr(self.axes, plotfunc)(x, *args, **kwargs)
-			items = patches
-
+			items = getattr(self.axes, plotfunc)(x, *args, **kwargs)
 
 		if is_x_date: 
 			self.fig.autofmt_xdate()
