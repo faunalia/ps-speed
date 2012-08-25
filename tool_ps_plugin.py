@@ -23,7 +23,7 @@ email                : brush.tyler@gmail.com
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-from qgis.core import QgsMapLayer, QgsFeature
+from qgis.core import QgsMapLayer, QgsFeature, QgsDataSourceURI, QgsVectorLayer, QgsRectangle
 
 import resources_rc
 
@@ -43,7 +43,6 @@ class ToolPS_Plugin:
 		QObject.connect( self.useActiveLayerAction, SIGNAL( "triggered()" ), self.useActiveLayer )
 
 		self.useOCILayerAction = QAction( "Use Oracle Spatial layer", self.iface.mainWindow() )	#QIcon( ":/ToolPS_plugin/icons/useOCILayer.png" )
-		QObject.connect( self.useOCILayerAction, SIGNAL( "triggered()" ), self.useOCILayer )
 
 		self.aboutAction = QAction( QIcon( ":/ToolPS_plugin/icons/about" ), "About", self.iface.mainWindow() )
 		QObject.connect( self.aboutAction, SIGNAL("triggered()"), self.about )
@@ -53,17 +52,13 @@ class ToolPS_Plugin:
 
 		# add actions to toolbars and menus
 		self.toolbar.addAction( self.useActiveLayerAction )
-		self.toolbar.addAction( self.useOCILayerAction )
 		self.iface.addPluginToMenu( "&ToolPS", self.useActiveLayerAction )
-		self.iface.addPluginToMenu( "&ToolPS", self.useOCILayerAction )
 		#self.iface.addPluginToMenu( "&ToolPS", self.aboutAction )
 
 	def unload(self):
 		# remove actions from toolbars and menus
 		self.toolbar.removeAction( self.useActiveLayerAction )
-		self.toolbar.removeAction( self.useOCILayerAction )
 		self.iface.removePluginMenu( "&ToolPS", self.useActiveLayerAction )
-		self.iface.removePluginMenu( "&ToolPS", self.useOCILayerAction )
 		#self.iface.removePluginMenu( "&ToolPS", self.aboutAction )
 
 		# delete the custom toolbar
@@ -78,9 +73,6 @@ class ToolPS_Plugin:
 		from about_dlg import AboutDlg
 		dlg = AboutDlg( self.iface.mainWindow() )
 		dlg.exec_()
-
-	def useOCILayer(self):
-		pass
 
 	def useActiveLayer(self):
 		layer = self.iface.activeLayer()
@@ -97,39 +89,105 @@ class ToolPS_Plugin:
 		if not layer or layer.type() != QgsMapLayer.VectorLayer:
 			return
 
+		# get the feature id of the point under the mouse click
 		from MapTools import FeatureFinder
 		fid = FeatureFinder.findAtPoint(layer, point, canvas=self.iface.mapCanvas(), onlyTheClosestOne=True, onlyIds=True)
 		if fid is None:
 			return
 
-		provider = layer.providerType()
-		infoFields = layer.dataProvider().fields()
+		# get the attribute map of the selected feature
+		feat = QgsFeature()
+		layer.featureAtId( fid, feat, False )
+		attrs = feat.attributeMap()
 
-		if provider == 'ogr':
-			if layer.source().endsWith( ".shp", Qt.CaseInsensitive ):	# Shapefile
-				feat = QgsFeature()
-				layer.featureAtId( fid, feat, False )
-				attrs = feat.attributeMap()
+		fields = layer.dataProvider().fields()
+		providerType = layer.providerType()
 
-				x, y = [], []
-				infoFields = {}	# recreate the dict containing fields info
-				for idx, fld in layer.dataProvider().fields().iteritems():
-					if QRegExp( "D\\d{8}", Qt.CaseInsensitive ).indexIn( fld.name().toUpper() ) < 0:
-						# info fields are all except those containing dates
-						infoFields[ idx ] = fld
-					else:
-						x.append( QDate.fromString( fld.name()[1:], "yyyyMMdd" ).toPyDate() )
-						y.append( attrs[ idx ].toDouble()[0] )
+		x, y = [], []	# lists containg values
+		infoFields = {}	# dict containing fields info
 
-			elif layer.source().startsWith( "OCI:", Qt.CaseInsensitive ):	# Oracle Spatial
-				raise NotImplemented
+		if providerType == 'ogr' and layer.source().endsWith( ".shp", Qt.CaseInsensitive ):	# Shapefile
+			for idx, fld in fields.iteritems():
+				if QRegExp( "D\\d{8}", Qt.CaseInsensitive ).indexIn( fld.name() ) < 0:
+					# info fields are all except those containing dates
+					infoFields[ idx ] = fld
+				else:
+					x.append( QDate.fromString( fld.name()[1:], "yyyyMMdd" ).toPyDate() )
+					y.append( attrs[ idx ].toDouble()[0] )
+
+		elif providerType in ['postgres', 'spatialite'] or \
+				( providerType == 'ogr' and layer.source().startsWith("OCI:", Qt.CaseInsensitive) ):	# PostGIS or SpatiaLite or Oracle Spatial
+			infoFields = fields
+
+			# get values of fields needed to join tables
+			if providerType == 'ogr':
+				# find the id_dataset and code_target
+				code = dataset = None
+				for idx, fld in fields.iteritems():
+					if fld.name().startsWith( "code", Qt.CaseInsensitive ):
+						code = attrs[ idx ].toString()
+					elif fld.name().endsWith( "dataset", Qt.CaseInsensitive ):
+						dataset = attrs[ idx ].toString()
+
+				if code is None or dataset is None:
+					return
+				subset = u"code_target='%s' AND id_dataset='%s'" % (code, dataset)
+
+				# create the uri
+				uri = layer.source()
+				pos = uri[4:].indexOf(':') < 0
+				if pos < 0:
+					return
+				uri = u"%s:ts_%s" % (uri[0, pos], uri[pos+1:])
 
 			else:
+				# find the field code
+				code = None
+				for idx, fld in fields.iteritems():
+					if fld.name().startsWith( "code", Qt.CaseInsensitive ):
+						code = attrs[ idx ].toString()
+
+				if code is None:
+					return
+				subset = u"code='%s'" % code
+
+				# create the uri
+				dsuri = QgsDataSourceURI( layer.source() )
+				dsuri.setDataSource( dsuri.schema(), u"ts_%s" % dsuri.table(), QString() )
+				uri = dsuri.uri()
+
+			# create the vector layer containing data will be plotted
+			vl = QgsVectorLayer( uri, "tool_ps", providerType )
+			if not vl.isValid():
 				return
 
-		elif provider in ['postgres', 'spatialite']:	# PostGIS e SpatiaLite
-			raise NotImplemented
+			vl.setSubsetString( subset )
+			try:
+				# get indexes of date (x) and value (y) fields
+				dateIdx, valueIdx = None, None
+				for idx, fld in vl.dataProvider().fields().iteritems():
+					if fld.name().startsWith( "dat", Qt.CaseInsensitive ):
+						dateIdx = idx
+					elif fld.name().startsWith( "val", Qt.CaseInsensitive ):
+						valueIdx = idx
 
+				if dateIdx is None or valueIdx is None:
+					return
+
+				# fetch and loop through all the features
+				vl.select( [dateIdx, valueIdx], QgsRectangle(), False, True )
+				f = QgsFeature()
+				while vl.nextFeature( f ):
+					# get x and y values
+					a = f.attributeMap()
+					x.append( QDate.fromString( a[ dateIdx ].toString(), "yyyyMMdd" ).toPyDate() )
+					y.append( a[ valueIdx ].toDouble()[0] )
+
+			finally:
+				vl.deleteLater()
+				del vl
+			
+		# display the plot dialog
 		from tool_ps_dlg import ToolPSDlg
 		dlg = ToolPSDlg( layer, infoFields )
 		dlg.setFeatureId( fid )
