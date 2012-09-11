@@ -32,7 +32,7 @@ from matplotlib.dates import date2num
 from .plot_wdg import PlotDlg, PlotWdg
 import resources_rc
 
-class ToolPSDlg(PlotDlg):
+class PSTimeSeries_Dlg(PlotDlg):
 
 	def __init__(self, vl, fieldMap, parent=None):
 		PlotDlg.__init__(self, parent=parent)

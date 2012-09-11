@@ -28,7 +28,7 @@ from qgis.core import QgsMapLayer, QgsFeature, QgsDataSourceURI, QgsVectorLayer,
 
 import resources_rc
 
-class ToolPS_Plugin:
+class PSTimeSeries_Plugin:
 
 	def __init__(self, iface):
 		self.iface = iface
@@ -173,8 +173,8 @@ class ToolPS_Plugin:
 				del vl
 			
 		# display the plot dialog
-		from tool_ps_dlg import ToolPSDlg
-		dlg = ToolPSDlg( layer, infoFields )
+		from .pstimeseries_dlg import PSTimeSeries_Dlg
+		dlg = PSTimeSeries_Dlg( layer, infoFields )
 		dlg.setFeatureId( fid )
 		dlg.setData( x, y )
 		dlg.exec_()

@@ -40,6 +40,6 @@ def qgisMinimumVersion():
 	return "1.5"
 
 def classFactory(iface):
-	from tool_ps_plugin import ToolPS_Plugin
-	return ToolPS_Plugin(iface)
+	from .pstimeseries_plugin import PSTimeSeries_Plugin
+	return PSTimeSeries_Plugin(iface)
 
