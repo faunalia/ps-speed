@@ -2,11 +2,12 @@
 
 """
 /***************************************************************************
-Name			 	 : ToolPS
-Description          : ToolPS plugin
-Date                 : Jul 25, 2012 
-copyright            : (C) 2012 by Giuseppe Sucameli (Faunalia)
-email                : brush.tyler@gmail.com
+Name                : PS Time Series Viewer
+Description         : Computation and visualization of time series of speed for 
+                    Permanent Scatterers derived from satellite interferometry
+Date                : Jul 25, 2012 
+copyright           : (C) 2012 by Giuseppe Sucameli (Faunalia)
+email               : brush.tyler@gmail.com
 
  ***************************************************************************/
 
@@ -21,10 +22,10 @@ email                : brush.tyler@gmail.com
 """
 
 def name():
-	return "ToolPS"
+	return "PS Time Series Viewer"
 
 def description():
-	return "ToolPS plugin "
+	return "Computation and visualization of time series of speed for Permanent Scatterers derived from satellite interferometry"
 
 def authorName():
 	return "Giuseppe Sucameli (Faunalia)"

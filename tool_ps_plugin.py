@@ -2,11 +2,12 @@
 
 """
 /***************************************************************************
-Name			 	 : ToolPS
-Description          : ToolPS plugin
-Date                 : Jul 25, 2012 
-copyright            : (C) 2012 by Giuseppe Sucameli (Faunalia)
-email                : brush.tyler@gmail.com
+Name                : PS Time Series Viewer
+Description         : Computation and visualization of time series of speed for 
+                    Permanent Scatterers derived from satellite interferometry
+Date                : Jul 25, 2012 
+copyright           : (C) 2012 by Giuseppe Sucameli (Faunalia)
+email               : brush.tyler@gmail.com
 
  ***************************************************************************/
 
@@ -29,43 +30,27 @@ import resources_rc
 
 class ToolPS_Plugin:
 
-	instance = None
-
 	def __init__(self, iface):
-		ToolPS_Plugin.instance = self
-
 		self.iface = iface
-		self.toolbar = None
 
 	def initGui(self):
 		# create the actions
-		self.useActiveLayerAction = QAction( "Use active layer", self.iface.mainWindow() )	#QIcon( ":/ToolPS_plugin/icons/useActiveLayer.png" )
+		self.useActiveLayerAction = QAction( "PS Time Series Viewer", self.iface.mainWindow() )	#QIcon( ":/pstimeseries_plugin/icons/useActiveLayer.png" )
 		QObject.connect( self.useActiveLayerAction, SIGNAL( "triggered()" ), self.useActiveLayer )
 
-		self.useOCILayerAction = QAction( "Use Oracle Spatial layer", self.iface.mainWindow() )	#QIcon( ":/ToolPS_plugin/icons/useOCILayer.png" )
-
-		self.aboutAction = QAction( QIcon( ":/ToolPS_plugin/icons/about" ), "About", self.iface.mainWindow() )
+		self.aboutAction = QAction( QIcon( ":/pstimeseries_plugin/icons/about" ), "About", self.iface.mainWindow() )
 		QObject.connect( self.aboutAction, SIGNAL("triggered()"), self.about )
-
-		# create a custom toolbar
-		self.toolbar = self.iface.addToolBar( "ToolPS" )
 
 		# add actions to toolbars and menus
 		self.toolbar.addAction( self.useActiveLayerAction )
-		self.iface.addPluginToMenu( "&ToolPS", self.useActiveLayerAction )
-		#self.iface.addPluginToMenu( "&ToolPS", self.aboutAction )
+		self.iface.addPluginToMenu( "&PS Time Series", self.useActiveLayerAction )
+		#self.iface.addPluginToMenu( "&PS Time Series", self.aboutAction )
 
 	def unload(self):
 		# remove actions from toolbars and menus
 		self.toolbar.removeAction( self.useActiveLayerAction )
-		self.iface.removePluginMenu( "&ToolPS", self.useActiveLayerAction )
-		#self.iface.removePluginMenu( "&ToolPS", self.aboutAction )
-
-		# delete the custom toolbar
-		self.toolbar.deleteLater()
-		self.toolbar = None
-
-		ToolPS_Plugin.instance = None
+		self.iface.removePluginMenu( "&PS Time Series", self.useActiveLayerAction )
+		#self.iface.removePluginMenu( "&PS Time Series", self.aboutAction )
 
 
 	def about(self):

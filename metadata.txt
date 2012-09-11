@@ -1,7 +1,8 @@
 ; the next section is mandatory
 [general]
-name=ToolPS
-description=ToolPS plugin
+name=PS Time Series Viewer
+description=Computation and visualization of time series of speed for 
+    Permanent Scatterers derived from satellite interferometry
 version=0.0.1
 qgisMinimumVersion=1.5
 
@@ -18,9 +19,9 @@ changelog=first version
 tags=permanent scatterers,time series
 
 homepage=http://www.faunalia.com/
-tracker=http://hub.qgis.org/projects/tool_ps
+tracker=http://hub.qgis.org/projects/pstimeseries
 repository=https://github.com/faunalia/tool_ps
-;repository=http://hub.qgis.org/projects/tool_ps/repository
+;repository=http://hub.qgis.org/projects/pstimeseries/repository
 
 ; path to a icon within the plugin folder
 icon=icons/logo.png

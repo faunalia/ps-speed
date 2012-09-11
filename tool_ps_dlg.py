@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 
 """
-/****************************************************************************
-Name			 	: ToolPS
-Description			: ToolPS plugin
-Date				: Jul 25, 2012 
-copyright			: (C) 2012 by Giuseppe Sucameli (Faunalia)
-email				: brush.tyler@gmail.com
- ****************************************************************************/
+/***************************************************************************
+Name                : PS Time Series Viewer
+Description         : Computation and visualization of time series of speed for 
+                    Permanent Scatterers derived from satellite interferometry
+Date                : Jul 25, 2012 
+copyright           : (C) 2012 by Giuseppe Sucameli (Faunalia)
+email               : brush.tyler@gmail.com
 
-/****************************************************************************
- *																			*
- *	This program is free software; you can redistribute it and/or modify	*
- *	it under the terms of the GNU General Public License as published by	*
- *	the Free Software Foundation; either version 2 of the License, or		*
- *	(at your option) any later version.										*
- *																			*
- ****************************************************************************/
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
 """
 
 from PyQt4.QtCore import *
@@ -34,7 +36,7 @@ class ToolPSDlg(PlotDlg):
 
 	def __init__(self, vl, fieldMap, parent=None):
 		PlotDlg.__init__(self, parent=parent)
-		self.setWindowTitle("ToolPS")
+		self.setWindowTitle("PS Time Series Viewer")
 
 		self._vl = vl
 		self._fieldMap = fieldMap

@@ -1,9 +1,11 @@
-RiskNat * Copyright (c) 2012 Giuseppe Sucameli (Faunalia)
+PS Time Series Viewer * Copyright (c) 2012 Giuseppe Sucameli (Faunalia)
 
 
-RiskNat is a EXPERIMENTAL plugin for QuantumGIS.
+PS Time Series Viewer is a EXPERIMENTAL plugin for QuantumGIS.
+It aims to compute and visualize of time series of speed for Permanent 
+Scatterers derived from satellite interferometry
 
 
 Visit the page on the QGis Hub site:
-    http://hub.qgis.org/projects/risk-nat
+    http://hub.qgis.org/projects/pstimeseries
 

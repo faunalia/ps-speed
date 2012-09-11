@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/tool_ps_plugin">
+    <qresource prefix="/pstimeseries_plugin">
         <file alias="icons/about">icons/about.png</file>
         <file alias="icons/refresh">icons/refresh.png</file>
     </qresource>
