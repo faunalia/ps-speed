@@ -99,7 +99,7 @@ class PlotWdg(FigureCanvasQTAgg):
 		self._clear()
 		# plot the new data
 		self._plot()
-		# udpdate axis limits
+		# update axis limits
 		self.axes.relim()	# it doesn't shrink until removing all the objects on the axis
 		# re-draw
 		self.draw()
@@ -113,14 +113,23 @@ class PlotWdg(FigureCanvasQTAgg):
 		self.info = info if info is not None else []
 		self._dirty = True
 
+
+	def getTitle(self):
+		return self.axes.get_title()
+
 	def setTitle(self, title, *args, **kwargs):
 		self.axes.set_title( title or "", *args, **kwargs )
 		self.draw()
+
+
+	def getLabels(self):
+		return self.axes.get_xlabel(), self.axes.get_ylabel()
 
 	def setLabels(self, xLabel=None, yLabel=None, *args, **kwargs):
 		self.axes.set_xlabel( xLabel or "", *args, **kwargs )
 		self.axes.set_ylabel( yLabel or "", *args, **kwargs )
 		self.draw()
+
 
 	def getLimits(self):
 		xlim = self.axes.get_xlim()
@@ -161,7 +170,7 @@ class PlotWdg(FigureCanvasQTAgg):
 					i.remove()
 			else:
 				item.remove()
-		except AttributeError:
+		except (ValueError, AttributeError):
 			pass
 
 
@@ -367,6 +376,9 @@ class NavigationToolbar(NavigationToolbar2QTAgg):
 
 		# remove the subplots action
 		self.removeAction( self.subplotsAction )
+
+	def configure_subplots(self, *args):
+		pass	# do nothing
 
 	class Cursor:
 		# cursors defined in backend_bases (from matplotlib source code)

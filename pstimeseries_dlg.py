@@ -29,8 +29,11 @@ from qgis.core import QgsFeature
 import numpy as np
 from matplotlib.dates import date2num
 
-from .plot_wdg import PlotDlg, PlotWdg
+from .plot_wdg import PlotDlg, PlotWdg, NavigationToolbar
 import resources_rc
+
+from .graph_settings_dialog import GraphSettings_Dlg
+
 
 class PSTimeSeries_Dlg(PlotDlg):
 
@@ -46,6 +49,8 @@ class PSTimeSeries_Dlg(PlotDlg):
 		self.layout().insertWidget( 0, self.toolbar )
 		QObject.connect( self, SIGNAL("featureChanged"), self.toolbar.updateInfos )
 
+		QObject.connect( self.nav, SIGNAL("updateRequested"), self.refresh )
+
 		QObject.connect( self.toolbar, SIGNAL("updateLimits"), self.plot.setLimits )
 		QObject.connect( self.toolbar, SIGNAL("updateReplicas"), self.plot.setReplicas )
 		QObject.connect( self.toolbar, SIGNAL("updateGrids"), self.plot.displayGrids )
@@ -57,6 +62,9 @@ class PSTimeSeries_Dlg(PlotDlg):
 
 	def createPlot(self):
 		return PlotGraph()
+
+	def createToolBar(self):
+		return NavToolbar(self.plot, self)
 
 	def setFeatureId(self, fid):
 		feat = QgsFeature()
@@ -72,14 +80,31 @@ class PSTimeSeries_Dlg(PlotDlg):
 
 	def showEvent(self, event):
 		PlotDlg.showEvent(self, event)
-		self.toolbar.setLimits( *self.plot.getLimits() )
+		# update the graph data limits
+		self.updateLimits( *self.plot.getLimits() )
+
+	def hideEvent(self, event):
+		QtGui.QApplication.restoreOverrideCursor()
+		PlotDlg.hideEvent(self, event)
+
+	def refresh(self):
+		lim = self.plot.getLimits()
+
+		# change the plot colors/fonts
+		self.plot.updateSettings()
+		# refresh everything
+		self.toolbar.updateAll()
+		self.plot._plot()
+
+		self.plot.setLimits( *lim )
 
 	def updateOptions(self, options):
 		""" update the chart options """
 		self.plot.displayLines( options['lines'] )
 		#self.plot.displayLegend( options['legend'] )
 		self.plot.displaySmoothLines( options['smooth'] )
-		self.plot.displayTrendLine( options['linregr'] )
+		self.plot.displayTrendLine( options['linregr'], 1 )
+		self.plot.displayTrendLine( options['polyregr'], 3 )
 		self.plot.displayDetrendedValues( options['detrending'] )
 
 	def updateTitle(self, params):
@@ -101,6 +126,9 @@ class PSTimeSeries_Dlg(PlotDlg):
 
 		self.plot.updateTitle( title )
 
+	def updateLimits(self, xlim, ylim):
+		self.toolbar.setLimits( xlim, ylim, True )
+
 
 class PlotGraph(PlotWdg):
 
@@ -113,22 +141,25 @@ class PlotGraph(PlotWdg):
 		self._points = None
 		self._lines = None
 		self._smoothLines = None
-		self._trendLine = None
+		self._trendLines = {}
 		self._upReplica = None
 		self._downReplica = None
 
 		self.updateSettings()
 
-	def updateSettings(self, props=None):
-		if props is None: props = {}
+	def updateSettings(self):
+		settingsToDict = GraphSettings_Dlg.settingsToDict
 
-		self._dataSettings = props.get('data', {'marker':'s', 'c':'k'})
-		self._trendLineSettings = props.get('trend', {'c':'r'})
-		self._upReplicaSettings = props.get('upReplica', {'marker':'s', 'c':'b'})
-		self._downReplicaSettings = props.get('downReplica', {'marker':'s', 'c':'b'})
+		settings = QSettings()
 
-		self._titleSettings = props.get('title', {'fontsize':'large'})
-		self._labelsSettings = props.get('labels', {'fontsize':'medium'})
+		self._pointsSettings = settingsToDict( settings.value("/pstimeseries/pointsProps", {'marker':'s', 'c':'k'}) )
+		self._linesSettings = settingsToDict( settings.value("/pstimeseries/linesProps", {'c':'k'}) )
+		self._trendLineSettings = settingsToDict( settings.value("/pstimeseries/linesThrendProps", {'c':'r'}) )
+		self._upReplicaSettings = settingsToDict( settings.value("/pstimeseries/pointsReplicasProps", {'marker':'s', 'c':'b'}) )
+		self._downReplicaSettings = settingsToDict( settings.value("/pstimeseries/pointsReplicasProps", {'marker':'s', 'c':'b'}) )
+
+		self._titleSettings = settingsToDict( settings.value("/pstimeseries/titleProps", {'fontsize':'large'}) )
+		self._labelsSettings = settingsToDict( settings.value("/pstimeseries/labelsProps", {'fontsize':'medium'}) )
 
 
 	def _plot(self):
@@ -142,12 +173,13 @@ class PlotGraph(PlotWdg):
 
 		# remove and re-draw points
 		self._removeItem( self._points )
-		self._points = self._callPlotFunc('scatter', self.x, self.y, **self._dataSettings)
+		self._points = self._callPlotFunc('scatter', self.x, self.y, **self._pointsSettings)
 		self.collections.append( self._points )
 
 		# update lines related to the main plot
 		self.displayLines( bool(self._lines) )
-		self.displayTrendLine( bool(self._trendLine) )
+		for grade in self._trendLines:
+			self.displayTrendLine( True, grade )
 		self.displaySmoothLines( bool(self._smoothLines) )
 
 
@@ -158,13 +190,12 @@ class PlotGraph(PlotWdg):
 			self._lines = None
 
 		if show:
-			linesSettings = dict(self._dataSettings)
-			linesSettings['marker'] = ''
+			lim = self.getLimits()
 
-			lim = self.axes.get_xlim(), self.axes.get_ylim()
-			self._lines = self._callPlotFunc('plot', self.x, self.y, **linesSettings)
+			self._lines = self._callPlotFunc('plot', self.x, self.y, **self._linesSettings)
 			self.collections.append( self._lines )
-			self.axes.set_xlim( lim[0] ), self.axes.set_ylim( lim[1] )
+
+			self.setLimits( *lim )
 
 		self.draw()
 
@@ -174,19 +205,21 @@ class PlotGraph(PlotWdg):
 		p = np.polyfit(x, y, d)
 		return x, np.polyval(p, x)
 
-	def displayTrendLine(self, show=True):
+	def displayTrendLine(self, show=True, grade=1):
 		# destroy the trend line
-		if self._trendLine:
-			self._removeItem( self._trendLine )
-			self._trendLine = None
+		if grade in self._trendLines:
+			self._removeItem( self._trendLines[grade] )
+			del self._trendLines[ grade ]
 
 		if show:
-			x, y = self._getTrendLineData()
+			lim = self.getLimits()
 
-			lim = self.axes.get_xlim(), self.axes.get_ylim()
-			self._trendLine = self._callPlotFunc('plot', x, y, **self._trendLineSettings)
-			self.collections.append( self._trendLine )
-			self.axes.set_xlim( lim[0] ), self.axes.set_ylim( lim[1] )
+			x, y = self._getTrendLineData( grade )
+			trendline = self._callPlotFunc('plot', x, y, **self._trendLineSettings)
+			self.collections.append( trendline )
+			self._trendLines[ grade ] = trendline
+
+			self.setLimits( *lim )
 
 		self.draw()
 
@@ -200,37 +233,39 @@ class PlotGraph(PlotWdg):
 
 
 	def displaySmoothLines(self, show=True):
-		# destroy the linear regression line
+		# destroy the smooth line
 		if self._smoothLines:
 			self._removeItem( self._smoothLines )
 			self._smoothLines = None
 
 		if show:
-			from scipy import interpolate
-			x = date2num( np.array(self.x) )
-			y = np.array(self.y)
+			try:
+				from scipy import interpolate
+				x = date2num( np.array(self.x) )
+				y = np.array(self.y)
 
-			tck = interpolate.splrep(x,y)
-			xmin, xmax = np.min(x), np.max(x)
-			xnew = np.arange( xmin, xmax, float(xmax-xmin)/len(x)/20.0 )
-			ynew = interpolate.splev(xnew, tck, der=0)
+				tck = interpolate.splrep(x,y)
+				xmin, xmax = np.min(x), np.max(x)
+				xnew = np.arange( xmin, xmax, float(xmax-xmin)/len(x)/20.0 )
+				ynew = interpolate.splev(xnew, tck, der=0)
+			except (ImportError, ValueError):
+				return
 
-			smoothLinesSettings = dict(self._dataSettings)
-			smoothLinesSettings['marker'] = ''
+			lim = self.getLimits()
 
-			lim = self.axes.get_xlim(), self.axes.get_ylim()
-			self._smoothLines = self._callPlotFunc('plot', xnew, ynew, **smoothLinesSettings)
+			self._smoothLines = self._callPlotFunc('plot', xnew, ynew, **self._linesSettings)
 			self.collections.append( self._smoothLines )
-			self.axes.set_xlim( lim[0] ), self.axes.set_ylim( lim[1] )
+
+			self.setLimits( *lim )
 
 		self.draw()
 
 
 	def updateTitle(self, title):
-		self.setTitle(title, **self._titleSettings)
+		self.setTitle(title, fontdict=self._titleSettings)
 
 	def updateLabels(self, xLabel, yLabel):
-		self.setLabels(xLabel, yLabel, **self._labelsSettings)
+		self.setLabels(xLabel, yLabel, fontdict=self._labelsSettings)
 
 	def setReplicas(self, dist, positions):
 		""" set up and/or down replicas for the graph """
@@ -263,7 +298,11 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 	def __init__(self, parent=None):
 		QtGui.QWidget.__init__(self, parent)
 		self.setupUi(self)
-		self.refreshScaleButton.setIcon( QtGui.QIcon( ":/tool_ps_plugin/icons/refresh" ) )
+
+		self.legendCheck.hide()
+		self.smoothCheck.hide()
+
+		self.refreshScaleButton.setIcon( QtGui.QIcon( ":/pstimeseries_plugin/icons/refresh" ) )
 
 		# limits group
 		#self.connect(self.minDateEdit, SIGNAL("dateChanged(const QDate &)"), self.updateLimits)
@@ -294,6 +333,7 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 		self.connect(self.labelsCheck, SIGNAL("toggled(bool)"), self.updateLabels)
 		self.connect(self.linesCheck, SIGNAL("toggled(bool)"), self.updateOptions)
 		self.connect(self.linRegrCheck, SIGNAL("toggled(bool)"), self.updateOptions)
+		self.connect(self.polyRegrCheck, SIGNAL("toggled(bool)"), self.updateOptions)
 		self.connect(self.detrendingCheck, SIGNAL("toggled(bool)"), self.updateOptions)
 		self.connect(self.smoothCheck, SIGNAL("toggled(bool)"), self.updateOptions)
 		self.connect(self.legendCheck, SIGNAL("toggled(bool)"), self.updateOptions)
@@ -302,8 +342,16 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 		self.populateTitleParamCombos( fieldMap )
 		self.labelsCheck.setChecked( True )
 
+
+	def updateAll(self):
+		self.updateTitle()
+		self.updateLabels()
+		self.updateReplicas()
+		self.updateOptions()
+
 	def updateInfos(self):
 		self.updateTitle()
+
 
 	def populateTitleParamCombos(self, fieldMap):
 		""" populate the title param combos """
@@ -335,19 +383,22 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 		""" request the chart options updating """
 		options = {
 			'lines': self.linesCheck.isChecked(),
-			'linregr': self.linRegrCheck.isChecked(),
-			'detrending': self.detrendingCheck.isChecked(),
 			'smooth': self.smoothCheck.isChecked(),
+			'linregr': self.linRegrCheck.isChecked(),
+			'polyregr': self.polyRegrCheck.isChecked(),
+			'detrending': self.detrendingCheck.isChecked(),
 			'legend': self.legendCheck.isChecked(),
 		}
 
 		self.emit( SIGNAL("updateOptions"), options )
 
-	def setLimits(self, xlim, ylim):
+	def setLimits(self, xlim, ylim, update=False):
 		self.minDateEdit.setDate(xlim[0])
 		self.maxDateEdit.setDate(xlim[1])
 		self.minYEdit.setText("%s" % ylim[0])
 		self.maxYEdit.setText("%s" % ylim[1])
+		if update:
+			self.updateLimits()
 
 	def updateLimits(self):
 		""" request the chart axis limits updating """
@@ -378,4 +429,22 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 			params.append( (label, fldIdx) )
 
 		self.emit( SIGNAL("updateTitle"), params)
+
+
+class NavToolbar(NavigationToolbar):
+	def __init__(self, canvas, parent=None):
+		NavigationToolbar.__init__(self, canvas, parent)
+
+		# add toolbutton to change fonts/colors
+		self.fontColorAction = QtGui.QAction( QtGui.QIcon(":/pstimeseries_plugin/icons/settings"), "Change fonts and colors", self )
+		self.fontColorAction.setToolTip( "Change fonts and colors" )
+		self.insertAction(self.homeAction, self.fontColorAction)
+		self.connect(self.fontColorAction, SIGNAL("triggered()"), self.openFontColorSettings)
+
+		self.insertSeparator(self.homeAction)
+
+	def openFontColorSettings(self):
+		dlg = GraphSettings_Dlg(self)
+		if dlg.exec_():
+			self.emit( SIGNAL("updateRequested") )
 
