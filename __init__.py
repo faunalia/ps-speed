@@ -27,14 +27,20 @@ def name():
 def description():
 	return "Computation and visualization of time series of speed for Permanent Scatterers derived from satellite interferometry"
 
-def authorName():
+def author():
 	return "Giuseppe Sucameli (Faunalia)"
+
+def authorName():
+	return author()
+
+def email():
+	return "sucameli@faunalia.it"
 
 def icon():
 	return "icons/logo.png"
 
 def version():
-	return "0.0.1"
+	return "0.1.1"
 
 def qgisMinimumVersion():
 	return "1.5"
