@@ -3,7 +3,7 @@
 name=PS Time Series Viewer
 description=Computation and visualization of time series of speed for 
     Permanent Scatterers derived from satellite interferometry
-version=0.1.2
+version=0.1.3
 qgisMinimumVersion=1.5
 
 category=Vector

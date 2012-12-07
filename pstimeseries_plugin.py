@@ -24,7 +24,7 @@ email               : brush.tyler@gmail.com
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-from qgis.core import QgsMapLayer, QgsFeature, QgsDataSourceURI, QgsVectorLayer, QgsRectangle, QgsMessageLog
+from qgis.core import *
 
 import resources_rc
 
@@ -80,7 +80,7 @@ class PSTimeSeries_Plugin:
 
 	def onPointClicked(self, point):
 		layer = self.iface.activeLayer()
-		if not layer or layer.type() != QgsMapLayer.VectorLayer:
+		if not layer or layer.type() != QgsMapLayer.VectorLayer or layer.geometryType() != QGis.Point:
 			QMessageBox.information(self.iface.mainWindow(), "PS Time Series Viewer", u"Select a vector layer and try again.")
 			return
 
@@ -117,6 +117,9 @@ class PSTimeSeries_Plugin:
 		ps_fields = ps_layer.dataProvider().fields()
 
 		providerType = ps_layer.providerType()
+		uri = QString(ps_source)
+		subset = ""
+
 		if providerType == 'ogr' and ps_source.endsWith( ".shp", Qt.CaseInsensitive ):
 			# Shapefile
 			for idx, fld in ps_fields.iteritems():
@@ -150,9 +153,9 @@ class PSTimeSeries_Plugin:
 
 			# create the uri
 			if ps_source.startsWith( "OCI:", Qt.CaseInsensitive ):
-				default_tbl_name = "RNAT_TARGET_SSTO"
+				default_tbl_name = "RISKNAT.RNAT_TARGET_SSTO"
 			elif ps_source.endsWith(".vrt", Qt.CaseInsensitive):
-				default_tbl_name = "RNAT_TARGET_SSTO.vrt"
+				default_tbl_name = "rnat_target_sso.vrt"
 			else:
 				default_tbl_name = ""
 			if not self._askTStablename( ps_layer,  default_tbl_name ):
@@ -160,13 +163,14 @@ class PSTimeSeries_Plugin:
 
 			if ps_source.startsWith( "OCI:", Qt.CaseInsensitive ):
 				# uri is like OCI:userid/password@database:table
-				uri = ps_source
 				pos = uri.indexOf(':', 4)
 				if pos >= 0:
 					uri = uri[0:pos]
 				uri = u"%s:%s" % (uri, self.ts_tablename)
 			else:
-				uri = u"%s/%s" % (QFileInfo(ps_source).dir().path(), self.ts_tablename)
+				# it's a VRT file
+				uri = u"%s/%s" % (QFileInfo(ps_source).path(), self.ts_tablename)
+				uri = QDir.toNativeSeparators( uri )
 
 			# load the layer containing time series
 			ts_layer = self._createTSlayer( uri, providerType, subset )
@@ -222,7 +226,8 @@ class PSTimeSeries_Plugin:
 		if len(x) * len(y) <= 0:
 			QMessageBox.warning( self.iface.mainWindow(), 
 					"PS Time Series Viewer", 
-					u"The layer '%s' wasn't found." % self.ts_tablename )
+					u"No time series values found for the selected point." % self.ts_tablename )
+			QgsMessageLog.logMessage( u"provider: %s - uri: %s\nsubset: %s" % (providerType, uri, subset), "PSTimeSeriesViewer" )
 			return
 			
 		# display the plot dialog
@@ -251,7 +256,7 @@ class PSTimeSeries_Plugin:
 			return
 
 		# fetch and loop through all the features
-		ts_layer.select( [dateIdx, valueIdx], QgsRectangle(), False, True )
+		ts_layer.select( [dateIdx, valueIdx], QgsRectangle(), False )
 		f = QgsFeature()
 		while ts_layer.nextFeature( f ):
 			# get x and y values
