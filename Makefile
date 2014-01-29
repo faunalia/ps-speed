@@ -25,5 +25,5 @@ PLUGIN_DIR=$(CURDIR)
 PLUGIN_NAME=`basename $(CURDIR)`
 
 package:
-	make all && cd .. && rm -f $(PLUGIN_NAME).zip && zip -r $(PLUGIN_NAME).zip $(PLUGIN_NAME) -x \*.svn* -x \*.pyc -x \*~ -x \*entries\* -x \*.git\* -x \*.skip\* && cd $(PLUGIN_NAME)
+	make all && cd .. && rm -f $(PLUGIN_NAME).zip && zip -r $(PLUGIN_NAME).zip $(PLUGIN_NAME) -x \*testdata\* -x \*.svn* -x \*.pyc -x \*~ -x \*entries\* -x \*.git\* -x \*.skip\* && cd $(PLUGIN_NAME)
 
