@@ -3,8 +3,8 @@
 name=PS Time Series Viewer
 description=Computation and visualization of time series of speed for 
     Permanent Scatterers derived from satellite interferometry
-version=0.1.3
-qgisMinimumVersion=1.5
+version=0.2
+qgisMinimumVersion=2.0
 
 category=Vector
 
@@ -15,7 +15,10 @@ email=sucameli@faunalia.it
 
 ; start of optional metadata
 
-changelog=
+changelog=0.2
+	Ported to QGSI 2.0
+	0.1.3
+	Version for qgis 1.8<
 
 ; tags are in comma separated value format, spaces are allowed
 tags=permanent scatterers,time series

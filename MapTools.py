@@ -61,8 +61,9 @@ class MapToolEmitPoint(qgis.gui.QgsMapToolEmitPoint):
 		self.canvas.unsetMapTool( self )
 
 	def deactivate(self):
-		qgis.gui.QgsMapTool.deactivate(self)
-		self.emit(SIGNAL("deactivated()"))
+		if qgis != None:
+			qgis.gui.QgsMapTool.deactivate(self)
+			self.emit(SIGNAL("deactivated()"))
 
 
 class Drawer(MapToolEmitPoint):
@@ -199,8 +200,8 @@ class FeatureFinder(MapToolEmitPoint):
 
 		# recupera il valore del raggio di ricerca
 		settings = QSettings()
-		(radius, ok) = settings.value( "/Map/identifyRadius", QGis.DEFAULT_IDENTIFY_RADIUS ).toDouble()
-		if not ok or radius <= 0:
+		radius = settings.value( "/Map/identifyRadius", QGis.DEFAULT_IDENTIFY_RADIUS, type=float)
+		if radius <= 0:
 			radius = QGis.DEFAULT_IDENTIFY_RADIUS
 		radius = canvas.extent().width() * radius/100
 
@@ -213,18 +214,18 @@ class FeatureFinder(MapToolEmitPoint):
 		rect = canvas.mapRenderer().mapToLayerCoordinates(layer, rect)
 
 		# recupera le feature che intersecano il rettangolo
-		layer.select([], rect, True, True)
-
 		ret = None
 
 		if onlyTheClosestOne:
+			request=QgsFeatureRequest()
+			request.setFilterRect(rect)
+
 			minDist = -1
 			featureId = None
 			rect = QgsGeometry.fromRect(rect)
 			count = 0
 
-			f = QgsFeature()
-			while layer.nextFeature(f):
+			for f in layer.getFeatures(request):
 				if onlyTheClosestOne:
 					geom = f.geometry()
 					distance = geom.distance(rect)
@@ -235,21 +236,23 @@ class FeatureFinder(MapToolEmitPoint):
 			if onlyIds:
 				ret = featureId
 			elif featureId != None:
-				layer.featureAtId(featureId, f, True, True)
+				f = QgsFeature()
+				feats = layer.getFeature( QgsFeatureRequest(featureId) )
+				feats.nextFeature(f)
 				ret = f
 
 		else:
 			IDs = []
-			f = QgsFeature()
-			while layer.nextFeature(f):
+			for f in layer.getFeatures():
 				IDs.append( f.id() )
 
 			if onlyIds:
 				ret = IDs
 			else:
 				ret = []
-				for featureId in IDs:
-					layer.featureAtId(featureId, f, True, True)
+				request = QgsFeatureRequest()
+				QgsFeatureRequest.setFilterFids(IDs)
+				for f in layer.getFeatures( request ):
 					ret.append( f )
 
 		QApplication.restoreOverrideCursor()

@@ -21,10 +21,11 @@ email               : brush.tyler@gmail.com
  ***************************************************************************/
 """
 
+import re
 from PyQt4.QtCore import *
 from PyQt4 import QtGui
 
-from qgis.core import QgsFeature
+from qgis.core import QgsFeature, QgsFeatureRequest
 
 import numpy as np
 from matplotlib.dates import date2num
@@ -68,8 +69,8 @@ class PSTimeSeries_Dlg(PlotDlg):
 
 	def setFeatureId(self, fid):
 		feat = QgsFeature()
-		if not self._vl.featureAtId( fid, feat, False ):
-			feat = None
+		feats = self._vl.getFeatures( QgsFeatureRequest(fid) )
+		feats.nextFeature(feat)
 		self._feat = feat
 
 		# update toolbar widgets based on the new feature
@@ -112,17 +113,17 @@ class PSTimeSeries_Dlg(PlotDlg):
 		title = u""
 
 		if self._feat:
-			attrs = self._feat.attributeMap()
+			attrs = self._feat.attributes()
 
 			# add the PS code
 			for idx, fld in self._fieldMap.iteritems():
-				if not fld.name().toLower().startsWith( "code" ):
+				if not fld.name().lower().startswith( "code" ):
 					continue
-				title = u"PS: %s" % attrs[ idx ].toString()
+				title = u"PS: %s" % attrs[ idx ]
 
 			# add the user-defined values
 			for label, fldIdx in params:
-				title += u" %s %s" % ( label, attrs[ fldIdx ].toString() )
+				title += u" %s %s" % ( label, attrs[ fldIdx ] )
 
 		self.plot.updateTitle( title )
 
@@ -267,6 +268,7 @@ class PlotGraph(PlotWdg):
 	def updateLabels(self, xLabel, yLabel):
 		self.setLabels(xLabel, yLabel, fontdict=self._labelsSettings)
 
+
 	def setReplicas(self, dist, positions):
 		""" set up and/or down replicas for the graph """
 		up, down = positions
@@ -360,14 +362,15 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 			combo = getattr(self, "titleParam%dCombo" % i)
 			# populate the title param combo with fields
 			for fldIdx, fld in fieldMap.iteritems():
-				combo.addItem( fld.name(), QVariant( fldIdx ) )
-				if fld.name().startsWith( edit.text()[:-2], Qt.CaseInsensitive ):
+				combo.addItem( fld.name(), fldIdx )
+				if bool( re.match("^"+edit.text()[:-2], fld.name(), re.IGNORECASE )):
 					combo.setCurrentIndex( combo.count()-1 )
 		
 	def updateReplicas(self):
 		""" request the graph replicas updating """
-		dist, ok = self.replicaDistEdit.text().toDouble()
-		if not ok:
+		try:
+			dist = float(self.replicaDistEdit.text())
+		except:
 			return
 		upReplica = self.replicaUpCheck.isChecked()
 		downReplica = self.replicaDownCheck.isChecked()
@@ -403,7 +406,7 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 	def updateLimits(self):
 		""" request the chart axis limits updating """
 		xLimits = (self.minDateEdit.date().toPyDate(), self.maxDateEdit.date().toPyDate())
-		yLimits = (self.minYEdit.text().toDouble()[0], self.maxYEdit.text().toDouble()[0])
+		yLimits = (float(self.minYEdit.text()), float(self.maxYEdit.text()))
 		self.emit( SIGNAL("updateLimits"), xLimits, yLimits )
 
 	def updateLabels(self):
@@ -425,7 +428,8 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 			label = getattr(self, "titleParam%dEdit" % i).text()
 			# get param value
 			combo = getattr(self, "titleParam%dCombo" % i)
-			fldIdx = combo.itemData( combo.currentIndex() ).toInt()[0]
+			#print "combo", combo, combo.currentIndex(), 
+			fldIdx = combo.itemData( combo.currentIndex() )
 			params.append( (label, fldIdx) )
 
 		self.emit( SIGNAL("updateTitle"), params)

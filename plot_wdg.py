@@ -241,16 +241,16 @@ class PlotWdg(FigureCanvasQTAgg):
 			return val
 
 		if val.type() == QtCore.QVariant.Int:
-			return val.toInt()[0]
+			return int(val)
 		elif val.type() == QtCore.QVariant.Double:
-			return val.toDouble()[0]
+			return float(val)
 		elif val.type() == QtCore.QVariant.Date:
 			return val.toDate().toPyDate()
 		elif val.type() == QtCore.QVariant.DateTime:
 			return val.toDateTime().toPyDateTime()
 
 		# try to convert the value to a date
-		s = unicode(val.toString())
+		s = unicode(val)
 		try:
 			return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
 		except ValueError:
@@ -260,9 +260,9 @@ class PlotWdg(FigureCanvasQTAgg):
 		except ValueError:
 			pass
 
-		v, ok = val.toDouble()
+		v, ok = val
 		if ok: return v
-		v, ok = val.toInt()
+		v, ok = val
 		if ok: return v
 		v = val.toDateTime()
 		if v.isValid(): return v.toPyDateTime()

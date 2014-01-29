@@ -33,6 +33,7 @@ class PSTimeSeries_Plugin:
 	def __init__(self, iface):
 		self.iface = iface
 		self.featFinder = None
+		self.running = False
 
 		# used to know where to ask for a new time-series tablename
 		self.last_ps_layerid = None
@@ -77,7 +78,6 @@ class PSTimeSeries_Plugin:
 		self.featFinder.startCapture()
 		self.iface.mainWindow().statusBar().showMessage( u"Click on a point feature in canvas" )
 
-
 	def onPointClicked(self, point):
 		layer = self.iface.activeLayer()
 		if not layer or layer.type() != QgsMapLayer.VectorLayer or layer.geometryType() != QGis.Point:
@@ -107,8 +107,9 @@ class PSTimeSeries_Plugin:
 
 		# get the attribute map of the selected feature
 		feat = QgsFeature()
-		ps_layer.featureAtId( fid, feat, False )
-		attrs = feat.attributeMap()
+		feats = ps_layer.getFeatures( QgsFeatureRequest(fid) )
+		feats.nextFeature(feat)
+		attrs = feat.attributes()
 
 		x, y = [], []	# lists containg x,y values
 		infoFields = {}	# hold the index->name of the fields containing info to be displayed
@@ -117,20 +118,20 @@ class PSTimeSeries_Plugin:
 		ps_fields = ps_layer.dataProvider().fields()
 
 		providerType = ps_layer.providerType()
-		uri = QString(ps_source)
+		uri = str(ps_source)
 		subset = ""
 
-		if providerType == 'ogr' and ps_source.endsWith( ".shp", Qt.CaseInsensitive ):
+		if providerType == 'ogr' and ps_source.lower().endswith( ".shp" ):
 			# Shapefile
-			for idx, fld in ps_fields.iteritems():
+			for idx, fld in enumerate(ps_fields):
 				if QRegExp( "D\\d{8}", Qt.CaseInsensitive ).indexIn( fld.name() ) < 0:
 					# info fields are all except those containing dates
 					infoFields[ idx ] = fld
 				else:
 					x.append( QDate.fromString( fld.name()[1:], "yyyyMMdd" ).toPyDate() )
-					y.append( attrs[ idx ].toDouble()[0] )
+					y.append( float(attrs[ idx ]) )
 
-		elif providerType == 'ogr' and (ps_source.startsWith("OCI:", Qt.CaseInsensitive) or ps_source.endsWith(".vrt", Qt.CaseInsensitive)):	# Oracle Spatial
+		elif providerType == 'ogr' and (ps_source.upper().startswith("OCI:") or ps_source.lower().endswith(".vrt")):	# Oracle Spatial
 
 			# fields containing values
 			dateField = "data_misura"
@@ -141,10 +142,10 @@ class PSTimeSeries_Plugin:
 			# PS and TS tables
 			idDataset = codeTarget = None
 			for idx, fld in ps_fields.iteritems():
-				if fld.name().toLower() == "id_dataset":
-					idDataset = attrs[ idx ].toString()
-				if fld.name().toLower() == "code_target":
-					codeTarget = attrs[ idx ].toString()
+				if fld.name().lower() == "id_dataset":
+					idDataset = attrs[ idx ]
+				if fld.name().lower() == "code_target":
+					codeTarget = attrs[ idx ]
 
 			if idDataset is None or codeTarget is None:
 				QgsMessageLog.logMessage( u"idDataset is %s, codeTarget is %s. Exiting" % (idDataset, codeTarget), "PSTimeSeriesViewer" )
@@ -152,16 +153,16 @@ class PSTimeSeries_Plugin:
 			subset = u"id_dataset='%s' AND code_target='%s'" % (idDataset, codeTarget)
 
 			# create the uri
-			if ps_source.startsWith( "OCI:", Qt.CaseInsensitive ):
+			if ps_source.upper().startswith( "OCI:" ):
 				default_tbl_name = "RISKNAT.RNAT_TARGET_SSTO"
-			elif ps_source.endsWith(".vrt", Qt.CaseInsensitive):
+			elif ps_source.lower().endswith(".vrt"):
 				default_tbl_name = "rnat_target_sso.vrt"
 			else:
 				default_tbl_name = ""
 			if not self._askTStablename( ps_layer,  default_tbl_name ):
 				return
 
-			if ps_source.startsWith( "OCI:", Qt.CaseInsensitive ):
+			if ps_source.upper().startswith( "OCI:" ):
 				# uri is like OCI:userid/password@database:table
 				pos = uri.indexOf(':', 4)
 				if pos >= 0:
@@ -195,8 +196,8 @@ class PSTimeSeries_Plugin:
 			# PS and TS tables
 			code = None
 			for idx, fld in ps_fields.iteritems():
-				if fld.name().toLower() == "code":
-					code = attrs[ idx ].toString()
+				if fld.name().lower() == "code":
+					code = attrs[ idx ]
 
 			if code is None:
 				QgsMessageLog.logMessage( u"code is None. Exiting" % code, "PSTimeSeriesViewer" )
@@ -208,7 +209,7 @@ class PSTimeSeries_Plugin:
 			default_tbl_name = u"ts_%s" % dsuri.table()
 			if not self._askTStablename( ps_layer,  default_tbl_name ):
 				return
-			dsuri.setDataSource( dsuri.schema(), self.ts_tablename, QString() )
+			dsuri.setDataSource( dsuri.schema(), self.ts_tablename, None ) # None or "" ? check during tests
 			uri = dsuri.uri()
 
 			# load the layer containing time series
@@ -246,9 +247,9 @@ class PSTimeSeries_Plugin:
 		# get indexes of date (x) and value (y) fields
 		dateIdx, valueIdx = None, None
 		for idx, fld in ts_layer.dataProvider().fields().iteritems():
-			if fld.name().toLower() == dateField:
+			if fld.name().lower() == dateField:
 				dateIdx = idx
-			elif fld.name().toLower() == valueField:
+			elif fld.name().lower() == valueField:
 				valueIdx = idx
 
 		if dateIdx is None or valueIdx is None:
@@ -256,15 +257,15 @@ class PSTimeSeries_Plugin:
 			return
 
 		# fetch and loop through all the features
-		ts_layer.select( [dateIdx, valueIdx], QgsRectangle(), False )
-		f = QgsFeature()
-		while ts_layer.nextFeature( f ):
+		request = QgsFeatureRequest()
+		request.setSubsetOfAttributes([dateIdx, valueIdx])
+		for f in ts_layer.getFeatures( request ):
 			# get x and y values
-			a = f.attributeMap()
-			x.append( QDate.fromString( a[ dateIdx ].toString(), "yyyyMMdd" ).toPyDate() )
-			y.append( a[ valueIdx ].toDouble()[0] )
-
-		return x, y
+			a = f.attributes()
+			x.append( QDate.fromString( a[ dateIdx ], "yyyyMMdd" ).toPyDate() )
+			y.append( float(a[ valueIdx ]) )
+			
+		return (x, y)
 
 	def _askTStablename(self, ps_layer, default_tblname=None):
 		# utility function used to ask to the user the name of the table
