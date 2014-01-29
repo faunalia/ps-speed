@@ -227,7 +227,7 @@ class PSTimeSeries_Plugin:
 		if len(x) * len(y) <= 0:
 			QMessageBox.warning( self.iface.mainWindow(), 
 					"PS Time Series Viewer", 
-					u"No time series values found for the selected point." % self.ts_tablename )
+					u"No time series values found for the selected point." )
 			QgsMessageLog.logMessage( u"provider: %s - uri: %s\nsubset: %s" % (providerType, uri, subset), "PSTimeSeriesViewer" )
 			return
 			
