@@ -26,5 +26,5 @@ PLUGIN_NAME=`basename $(CURDIR)`
 PLUGIN_ZIP_NAME = 'pstimeseries'
 
 package:
-	make all && cd .. && rm -f $(PLUGIN_NAME).zip && zip -r $(PLUGIN_ZIP_NAME).zip $(PLUGIN_NAME) -x \*testdata\* -x \*.svn* -x \*.pyc -x \*~ -x \*entries\* -x \*.git\* -x \*.skip\* && cd $(PLUGIN_NAME)
+	make all && cd .. && mv $(PLUGIN_NAME) $(PLUGIN_ZIP_NAME) && rm -f $(PLUGIN_NAME).zip && zip -r $(PLUGIN_ZIP_NAME).zip $(PLUGIN_ZIP_NAME) -x \*testdata\* -x \*.svn* -x \*.pyc -x \*~ -x \*entries\* -x \*.git\* -x \*.skip\* && mv $(PLUGIN_ZIP_NAME) $(PLUGIN_NAME) && cd $(PLUGIN_NAME)
 
