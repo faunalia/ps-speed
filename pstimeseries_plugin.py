@@ -141,7 +141,7 @@ class PSTimeSeries_Plugin:
 			# search for the id_dataset and code_target fields needed to join 
 			# PS and TS tables
 			idDataset = codeTarget = None
-			for idx, fld in ps_fields.iteritems():
+			for idx, fld in enumerate(ps_fields):
 				if fld.name().lower() == "id_dataset":
 					idDataset = attrs[ idx ]
 				if fld.name().lower() == "code_target":
@@ -195,7 +195,7 @@ class PSTimeSeries_Plugin:
 			# search for the id_dataset and code_target fields needed to join 
 			# PS and TS tables
 			code = None
-			for idx, fld in ps_fields.iteritems():
+			for idx, fld in enumerate( ps_fields ):
 				if fld.name().lower() == "code":
 					code = attrs[ idx ]
 
@@ -246,7 +246,7 @@ class PSTimeSeries_Plugin:
 
 		# get indexes of date (x) and value (y) fields
 		dateIdx, valueIdx = None, None
-		for idx, fld in ts_layer.dataProvider().fields().iteritems():
+		for idx, fld in enumerate(ts_layer.dataProvider().fields()):
 			if fld.name().lower() == dateField:
 				dateIdx = idx
 			elif fld.name().lower() == valueField:
@@ -265,7 +265,7 @@ class PSTimeSeries_Plugin:
 			x.append( QDate.fromString( a[ dateIdx ], "yyyyMMdd" ).toPyDate() )
 			y.append( float(a[ valueIdx ]) )
 			
-		return (x, y)
+		return x, y
 
 	def _askTStablename(self, ps_layer, default_tblname=None):
 		# utility function used to ask to the user the name of the table

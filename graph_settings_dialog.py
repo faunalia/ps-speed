@@ -265,7 +265,7 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 	@classmethod
 	def settingsToDict(self, s):
 		r = {}
-		for k,v in s.iteritems():
+		for k,v in s.items():
 			r[ unicode(k) ] = unicode(v) if isinstance(v, str) else v
 		return r
 

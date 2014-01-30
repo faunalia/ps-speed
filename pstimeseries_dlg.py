@@ -116,7 +116,7 @@ class PSTimeSeries_Dlg(PlotDlg):
 			attrs = self._feat.attributes()
 
 			# add the PS code
-			for idx, fld in self._fieldMap.iteritems():
+			for idx, fld in self._fieldMap.items():
 				if not fld.name().lower().startswith( "code" ):
 					continue
 				title = u"PS: %s" % attrs[ idx ]
@@ -361,7 +361,7 @@ class ToolPSToolbar(QtGui.QWidget, Ui_ToolPSToolBar):
 			edit = getattr(self, "titleParam%dEdit" % i)
 			combo = getattr(self, "titleParam%dCombo" % i)
 			# populate the title param combo with fields
-			for fldIdx, fld in fieldMap.iteritems():
+			for fldIdx, fld in fieldMap.items():
 				combo.addItem( fld.name(), fldIdx )
 				if bool( re.match("^"+edit.text()[:-2], fld.name(), re.IGNORECASE )):
 					combo.setCurrentIndex( combo.count()-1 )
