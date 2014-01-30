@@ -136,7 +136,7 @@ class PSTimeSeries_Plugin:
 			# fields containing values
 			dateField = "data_misura"
 			valueField = "spost_rel_mm"
-			infoFields = ps_fields
+			infoFields = dict(enumerate(ps_fields))
 
 			# search for the id_dataset and code_target fields needed to join 
 			# PS and TS tables
@@ -190,7 +190,7 @@ class PSTimeSeries_Plugin:
 			# fields containing values
 			dateField = "dataripresa"
 			valueField = "valore"
-			infoFields = ps_fields
+			infoFields = dict(enumerate(ps_fields))
 
 			# search for the id_dataset and code_target fields needed to join 
 			# PS and TS tables
