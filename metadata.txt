@@ -9,7 +9,7 @@ qgisMinimumVersion=2.0
 category=Vector
 
 author=Giuseppe Sucameli (Faunalia)
-email=sucameli@faunalia.it
+email=info@faunalia.eu
 
 ; end of mandatory metadata
 
@@ -27,7 +27,7 @@ changelog=0.2.2
 ; tags are in comma separated value format, spaces are allowed
 tags=permanent scatterers,time series
 
-homepage=http://www.faunalia.com/
+homepage=http://www.faunalia.eu/
 tracker=http://hub.qgis.org/projects/pstimeseries
 repository=https://github.com/faunalia/ps-speed
 ;repository=http://hub.qgis.org/projects/pstimeseries/repository
