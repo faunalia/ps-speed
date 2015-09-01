@@ -39,5 +39,5 @@ repository=https://github.com/faunalia/ps-speed
 ; path to a icon within the plugin folder
 icon=icons/logo.png
 
-experimental=True
+experimental=False
 deprecated=False
