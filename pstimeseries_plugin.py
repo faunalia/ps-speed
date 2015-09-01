@@ -118,7 +118,7 @@ class PSTimeSeries_Plugin:
 		ps_fields = ps_layer.dataProvider().fields()
 
 		providerType = ps_layer.providerType()
-		uri = str(ps_source)
+		uri = ps_source
 		subset = ""
 
 		if providerType == 'ogr' and ps_source.lower().endswith( ".shp" ):
