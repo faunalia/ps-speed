@@ -363,7 +363,7 @@ class ScatterPlotDlg(PlotDlg):
 
 
 # import the NavigationToolbar Qt4Agg widget
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2QTAgg
 
 class NavigationToolbar(NavigationToolbar2QTAgg):
 
