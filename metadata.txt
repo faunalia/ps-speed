@@ -1,12 +1,12 @@
 ; the next section is mandatory
 [general]
 name=PS Time Series Viewer
-description=Computation and visualization of time series of speed for 
+description=Computation and visualization of time series of speed for
     Permanent Scatterers derived from satellite interferometry
-about=Computation and visualization of time series of speed for 
+about=Computation and visualization of time series of speed for
     Permanent Scatterers derived from satellite interferometry
-version=0.2.3
-qgisMinimumVersion=2.0
+version=0.3.0
+qgisMinimumVersion=3.0
 
 category=Vector
 
