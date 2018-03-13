@@ -3,9 +3,9 @@
 """
 /***************************************************************************
 Name                : PS Time Series Viewer
-Description         : Computation and visualization of time series of speed for 
+Description         : Computation and visualization of time series of speed for
                     Permanent Scatterers derived from satellite interferometry
-Date                : Oct 05, 2012 
+Date                : Oct 05, 2012
 copyright           : (C) 2012 by Giuseppe Sucameli (Faunalia)
 email               : brush.tyler@gmail.com
 
@@ -21,8 +21,10 @@ email               : brush.tyler@gmail.com
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from qgis.PyQt.QtGui import QPixmap, QColor, QIcon, QFont
+from qgis.PyQt.QtWidgets import QDialog, QColorDialog
+
+from qgis.core import QgsSettings
 
 from matplotlib.font_manager import FontManager
 from .ui.graph_settings_dialog_ui import Ui_Dialog
@@ -54,12 +56,12 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 
 		self.initProps()
 
-		QObject.connect(self.titleColorBtn, SIGNAL("clicked()"), self.chooseTitleColor)
-		QObject.connect(self.labelsColorBtn, SIGNAL("clicked()"), self.chooseLabelsColor)
-		QObject.connect(self.pointsColorBtn, SIGNAL("clicked()"), self.choosePointsColor)
-		QObject.connect(self.pointsReplicasColorBtn, SIGNAL("clicked()"), self.choosePointsReplicasColor)
-		QObject.connect(self.linesColorBtn, SIGNAL("clicked()"), self.chooseLinesColor)
-		QObject.connect(self.linesThrendColorBtn, SIGNAL("clicked()"), self.chooseLinesThrendColor)
+		self.titleColorBtn.clicked.connect(self.chooseTitleColor)
+		self.labelsColorBtn.clicked.connect(self.chooseLabelsColor)
+		self.pointsColorBtn.clicked.connect(self.choosePointsColor)
+		self.pointsReplicasColorBtn.clicked.connect(self.choosePointsReplicasColor)
+		self.linesColorBtn.clicked.connect(self.chooseLinesColor)
+		self.linesThrendColorBtn.clicked.connect(self.chooseLinesThrendColor)
 
 	def choosePointsColor(self):
 		dlg = QColorDialog(self.pointsColor, self)
@@ -83,7 +85,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 	def setPointsProps(self, props):
 		self.setPointsColor( props.get('color', 'black') )
 
-
 	def choosePointsReplicasColor(self):
 		dlg = QColorDialog(self.pointsReplicasColor, self)
 		if dlg.exec_():
@@ -99,13 +100,12 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 	def pointsReplicasProps(self):
 		props = {
 			'marker' : 's',
-			'color' : self.pointsReplicasColor.name(), 
+			'color' : self.pointsReplicasColor.name(),
 		}
 		return props
 
 	def setPointsReplicasProps(self, props):
 		self.setPointsReplicasColor( props.get('color', 'blue') )
-
 
 	def chooseLinesColor(self):
 		dlg = QColorDialog(self.linesColor, self)
@@ -128,7 +128,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 	def setLinesProps(self, props):
 		self.setLinesColor( props.get('color', 'black') )
 
-
 	def chooseLinesThrendColor(self):
 		dlg = QColorDialog(self.linesThrendColor, self)
 		if dlg.exec_():
@@ -143,13 +142,12 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 
 	def linesThrendProps(self):
 		props = {
-			'color' : self.linesThrendColor.name(), 
+			'color' : self.linesThrendColor.name(),
 		}
 		return props
 
 	def setLinesThrendProps(self, props):
 		self.setLinesThrendColor( props.get('color', 'red') )
-
 
 	def chooseTitleColor(self):
 		dlg = QColorDialog(self.titleColor, self)
@@ -163,7 +161,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		pixmap.fill( self.titleColor )
 		self.titleColorBtn.setIcon( QIcon(pixmap) )
 
-
 	def chooseLabelsColor(self):
 		dlg = QColorDialog(self.labelsColor, self)
 		if dlg.exec_():
@@ -175,7 +172,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		pixmap = QPixmap( 20,20 )
 		pixmap.fill( self.labelsColor )
 		self.labelsColorBtn.setIcon( QIcon(pixmap) )
-
 
 	def titleFontProps(self):
 		qfont = self.titleFontCombo.currentFont()
@@ -206,7 +202,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		self.titleBoldBtn.setChecked( props.get('weight', '') == 'bold' )
 		self.titleItalicBtn.setChecked( props.get('style', '') == 'italic' )
 
-
 	def labelsFontProps(self):
 		qfont = self.labelsFontCombo.currentFont()
 		qfont.setPointSize( self.titleSizeSpin.value() )
@@ -236,9 +231,8 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		self.labelsBoldBtn.setChecked( props.get('weight', '') == 'bold' )
 		self.labelsItalicBtn.setChecked( props.get('style', '') == 'italic' )
 
-
 	def initProps(self):
-		settings = QSettings()
+		settings = QgsSettings()
 		self.setTitleFontProps( self.settingsToDict( settings.value("/pstimeseries/titleProps", {}) ) )
 		self.setLabelsFontProps( self.settingsToDict( settings.value("/pstimeseries/labelsProps", {}) ) )
 
@@ -249,7 +243,7 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		self.setLinesThrendProps( self.settingsToDict( settings.value("/pstimeseries/linesThrendProps", {}) ) )
 
 	def accept(self):
-		settings = QSettings()
+		settings = QgsSettings()
 		settings.setValue("/pstimeseries/titleProps", self.titleFontProps())
 		settings.setValue("/pstimeseries/labelsProps", self.labelsFontProps())
 
@@ -261,7 +255,6 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 
 		QDialog.accept(self)
 
-
 	@classmethod
 	def settingsToDict(self, s):
 		r = {}
@@ -272,7 +265,7 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 	@classmethod
 	def qfontToProps(self, qfont):
 		props = {
-			'family' : unicode(qfont.family()), 
+			'family' : unicode(qfont.family()),
 			'stretch' : qfont.stretch(),
 			'weight' : qfont.weight()
 		}
@@ -295,9 +288,8 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 		font = FontProperties( fname=findfont( FontProperties(**props) ) )
 
 		props = {
-			'family' : font.get_name(), 
+			'family' : font.get_name(),
 			'weight' : font.get_weight(),
 			'style' : font.get_style(),
 		}
 		return props
-
