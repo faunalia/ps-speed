@@ -4,7 +4,7 @@
 /****************************************************************************
 Name			 	: GEM Modellers Toolkit plugin (GEM-MT)
 Description			: Analysing and Processing Earthquake Catalogue Data
-Date				: Jun 21, 2012 
+Date				: Jun 21, 2012
 copyright			: (C) 2012 by Giuseppe Sucameli (Faunalia)
 email				: brush.tyler@gmail.com
  ****************************************************************************/
@@ -19,8 +19,9 @@ email				: brush.tyler@gmail.com
  ****************************************************************************/
 """
 
-# Python Qt4 bindings for GUI objects
-from PyQt4 import QtGui, QtCore
+from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QApplication
+from qgis.PyQt.QtCore import Qt, QVariant
+from qgis.PyQt.QtGui import QCursor
 
 # Matplotlib Figure object
 from matplotlib.figure import Figure
@@ -31,7 +32,8 @@ from matplotlib.lines import Line2D
 
 # import the Qt4Agg FigureCanvas object, that binds Figure to
 # Qt4Agg backend. It also inherits from QWidget
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+
 
 class PlotWdg(FigureCanvasQTAgg):
 	"""Class to represent the FigureCanvas widget"""
@@ -60,12 +62,10 @@ class PlotWdg(FigureCanvasQTAgg):
 		if yscale:
 			self.axes.set_yscale( yscale )
 
-
 	def itemAt(self, index):
 		if index >= len(self.x):
 			return None
 		return (self.x[index] if self.x else None, self.y[index] if self.y else None)
-
 
 	def delete(self):
 		self._clear()
@@ -79,11 +79,10 @@ class PlotWdg(FigureCanvasQTAgg):
 	def deleteLater(self, *args):
 		self.delete()
 		return FigureCanvasQTAgg.deleteLater(self, *args)
-		
+
 	def destroy(self, *args):
 		self.delete()
 		return FigureCanvasQTAgg.destroy(self, *args)
-
 
 	def setDirty(self, val):
 		self._dirty = val
@@ -92,7 +91,6 @@ class PlotWdg(FigureCanvasQTAgg):
 		if self._dirty:
 			self.refreshData()
 		return FigureCanvasQTAgg.showEvent(self, event)
-
 
 	def refreshData(self):
 		# remove the old stuff
@@ -106,13 +104,11 @@ class PlotWdg(FigureCanvasQTAgg):
 		# unset the dirty flag
 		self._dirty = False
 
-
 	def setData(self, x, y=None, info=None):
 		self.x = x if x is not None else []
 		self.y = y if y is not None else []
 		self.info = info if info is not None else []
 		self._dirty = True
-
 
 	def getTitle(self):
 		return self.axes.get_title()
@@ -121,7 +117,6 @@ class PlotWdg(FigureCanvasQTAgg):
 		self.axes.set_title( title or "", *args, **kwargs )
 		self.draw()
 
-
 	def getLabels(self):
 		return self.axes.get_xlabel(), self.axes.get_ylabel()
 
@@ -129,7 +124,6 @@ class PlotWdg(FigureCanvasQTAgg):
 		self.axes.set_xlabel( xLabel or "", *args, **kwargs )
 		self.axes.set_ylabel( yLabel or "", *args, **kwargs )
 		self.draw()
-
 
 	def getLimits(self):
 		xlim = self.axes.get_xlim()
@@ -157,7 +151,6 @@ class PlotWdg(FigureCanvasQTAgg):
 		self.axes.yaxis.grid(hgrid, 'major')
 		self.draw()
 
-
 	def _removeItem(self, item):
 		try:
 			self.collections.remove( item )
@@ -173,7 +166,6 @@ class PlotWdg(FigureCanvasQTAgg):
 		except (ValueError, AttributeError):
 			pass
 
-
 	def _clear(self):
 		for item in self.collections:
 			self._removeItem( item )
@@ -188,12 +180,11 @@ class PlotWdg(FigureCanvasQTAgg):
 		items = self._callPlotFunc('plot', x, y)
 		self.collections.append( items )
 
-
 	def _callPlotFunc(self, plotfunc, x, y=None, *args, **kwargs):
 		is_x_date = isinstance(x[0], (datetime, date)) if len(x) > 0 else False
 		is_y_date = isinstance(y[0], (datetime, date)) if y is not None and len(y) > 0 else False
 
-		if is_x_date: 
+		if is_x_date:
 			self._setAxisDateFormatter( self.axes.xaxis, x )
 			x = date2num(x)
 		if is_y_date:
@@ -205,7 +196,7 @@ class PlotWdg(FigureCanvasQTAgg):
 		else:
 			items = getattr(self.axes, plotfunc)(x, *args, **kwargs)
 
-		if is_x_date: 
+		if is_x_date:
 			self.fig.autofmt_xdate()
 		#if is_y_date:
 		#	self.fig.autofmt_ydate()
@@ -233,24 +224,23 @@ class PlotWdg(FigureCanvasQTAgg):
 			#axis.set_minor_locator( HourLocator() )
 			#bins = timedelta.days * 4	# four bins for a day
 
-
 	@staticmethod
 	def _valueFromQVariant(val):
 		""" function to convert values to proper types """
-		if not isinstance(val, QtCore.QVariant):
+		if not isinstance(val, QVariant):
 			return val
 
-		if val.type() == QtCore.QVariant.Int:
+		if val.type() == QVariant.Int:
 			return int(val)
-		elif val.type() == QtCore.QVariant.Double:
+		elif val.type() == QVariant.Double:
 			return float(val)
-		elif val.type() == QtCore.QVariant.Date:
+		elif val.type() == QVariant.Date:
 			return val.toDate().toPyDate()
-		elif val.type() == QtCore.QVariant.DateTime:
+		elif val.type() == QVariant.DateTime:
 			return val.toDateTime().toPyDateTime()
 
 		# try to convert the value to a date
-		s = unicode(val)
+		s = str(val)
 		try:
 			return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
 		except ValueError:
@@ -269,7 +259,7 @@ class PlotWdg(FigureCanvasQTAgg):
 		v = val.toDate()
 		if v.isValid(): return v.toPyDate()
 
-		return unicode(s)
+		return str(s)
 
 
 class HistogramPlotWdg(PlotWdg):
@@ -299,12 +289,12 @@ class ScatterPlotWdg(PlotWdg):
 		self.collections.append( items )
 
 
-class PlotDlg(QtGui.QDialog):
+class PlotDlg(QDialog):
 	def __init__(self, parent, *args, **kwargs):
-		QtGui.QDialog.__init__(self, parent, QtCore.Qt.Window)
+		QDialog.__init__(self, parent, Qt.Window)
 		self.setWindowTitle("Plot dialog")
 
-		layout = QtGui.QVBoxLayout(self)
+		layout = QVBoxLayout(self)
 
 		self.plot = self.createPlot(*args, **kwargs)
 		layout.addWidget(self.plot)
@@ -312,21 +302,19 @@ class PlotDlg(QtGui.QDialog):
 		self.nav = self.createToolBar()
 		layout.addWidget(self.nav)
 
-
 	def enterEvent(self, event):
 		self.nav.set_cursor( NavigationToolbar.Cursor.POINTER )
-		return QtGui.QDialog.enterEvent(self, event)
+		return QDialog.enterEvent(self, event)
 
 	def leaveEvent(self, event):
 		self.nav.unset_cursor()
-		return QtGui.QDialog.leaveEvent(self, event)
+		return QDialog.leaveEvent(self, event)
 
 	def createPlot(self, *args, **kwargs):
 		return PlotWdg(*args, **kwargs)
 
 	def createToolBar(self):
 		return NavigationToolbar(self.plot, self)
-
 
 	def refresh(self):
 		# query for refresh
@@ -346,13 +334,13 @@ class PlotDlg(QtGui.QDialog):
 		self.plot.setLabels(xLabel, yLabel)
 
 
-
 class HistogramPlotDlg(PlotDlg):
 	def __init__(self, *args, **kwargs):
 		PlotDlg.__init__(self, *args, **kwargs)
 
 	def createPlot(self, *args, **kwargs):
 		return HistogramPlotWdg(*args, **kwargs)
+
 
 class ScatterPlotDlg(PlotDlg):
 	def __init__(self, *args, **kwargs):
@@ -363,12 +351,12 @@ class ScatterPlotDlg(PlotDlg):
 
 
 # import the NavigationToolbar Qt4Agg widget
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2QTAgg
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
-class NavigationToolbar(NavigationToolbar2QTAgg):
+class NavigationToolbar(NavigationToolbar2QT):
 
 	def __init__(self, *args, **kwargs):
-		NavigationToolbar2QTAgg.__init__(self, *args, **kwargs)
+		NavigationToolbar2QT.__init__(self, *args, **kwargs)
 
 		self.init_buttons()
 		self.panAction.setCheckable(True)
@@ -387,24 +375,24 @@ class NavigationToolbar(NavigationToolbar2QTAgg):
 		@classmethod
 		def toQCursor(self, cursor):
 			if cursor == self.MOVE:
-				n = QtCore.Qt.SizeAllCursor
+				n = Qt.SizeAllCursor
 			elif cursor == self.HAND:
-				n = QtCore.Qt.PointingHandCursor
+				n = Qt.PointingHandCursor
 			elif cursor == self.SELECT_REGION:
-				n = QtCore.Qt.CrossCursor
+				n = Qt.CrossCursor
 			else:#if cursor == self.POINTER:
-				n = QtCore.Qt.ArrowCursor
-			return QtGui.QCursor( n )
+				n = Qt.ArrowCursor
+			return QCursor( n )
 
 	def set_cursor(self, cursor):
 		if cursor != self._lastCursor:
 			self.unset_cursor()
-			QtGui.QApplication.setOverrideCursor( NavigationToolbar.Cursor.toQCursor(cursor) )
+			QApplication.setOverrideCursor( NavigationToolbar.Cursor.toQCursor(cursor) )
 			self._lastCursor = cursor
 
 	def unset_cursor(self):
 		if self._lastCursor:
-			QtGui.QApplication.restoreOverrideCursor()
+			QApplication.restoreOverrideCursor()
 			self._lastCursor = None
 
 	def init_buttons(self):
@@ -429,11 +417,11 @@ class NavigationToolbar(NavigationToolbar2QTAgg):
 
 	def pan( self, *args ):
 		self.resetActionsState( self.panAction )
-		NavigationToolbar2QTAgg.pan( self, *args )
+		NavigationToolbar2QT.pan( self, *args )
 
 	def zoom( self, *args ):
 		self.resetActionsState( self.zoomAction )
-		NavigationToolbar2QTAgg.zoom( self, *args )
+		NavigationToolbar2QT.zoom( self, *args )
 
 
 class ClippedLine2D(Line2D):
@@ -474,7 +462,6 @@ class ClippedLine2D(Line2D):
 					x = max(maxx, xlim[0]), min(minx, xlim[1])
 					y = min(miny, ylim[1]), max(maxy, ylim[0])
 
-
 			self.set_data(x, y)
 
 		Line2D.draw(self, renderer)
@@ -485,7 +472,7 @@ if __name__ == "__main__":
 	import sys
 
 	# Create the GUI application
-	app = QtGui.QApplication(sys.argv)
+	app = QApplication(sys.argv)
 
 	# show a histogram plot
 	HistogramPlotWdg( [[1,2,1,1,4,3,4,5]], ["x", "y"] ).show()
