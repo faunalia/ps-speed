@@ -48,7 +48,7 @@ class GraphSettings_Dlg(QDialog, Ui_Dialog):
 				props = self.findFont( {'family':family} )
 				if family == props['family']:
 					found = True
-			except KeyError:
+			except Exception:
 				pass
 			if not found:
 				self.titleFontCombo.removeItem( index )
