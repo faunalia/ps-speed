@@ -4,13 +4,13 @@
 /***************************************************************************
 Name                 : Omero RT
 Description          : Omero plugin map tools
-Date                 : August 15, 2010 
+Date                 : August 15, 2010
 copyright            : (C) 2010 by Giuseppe Sucameli (Faunalia)
 email                : sucameli@faunalia.it
  ***************************************************************************/
 
 Omero plugin
-Works done from Faunalia (http://www.faunalia.it) with funding from Regione 
+Works done from Faunalia (http://www.faunalia.it) with funding from Regione
 Toscana - S.I.T.A. (http://www.regione.toscana.it/territorio/cartografia/index.html)
 
 /***************************************************************************
@@ -23,25 +23,28 @@ Toscana - S.I.T.A. (http://www.regione.toscana.it/territorio/cartografia/index.h
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from qgis.PyQt.QtCore import Qt, pyqtSignal
+from qgis.PyQt.QtGui import QCursor
+from qgis.PyQt.QtWidgets import QApplication
 
-from qgis.core import *
-import qgis.gui
+from qgis.core import QgsWkbTypes, QgsFeatureRequest, QgsRectangle, QgsGeometry, QgsFeature, QgsSettings, Qgis
+from qgis.gui import QgsMapToolEmitPoint, QgsMapTool, QgsRubberBand
 
-class MapToolEmitPoint(qgis.gui.QgsMapToolEmitPoint):
+
+class MapToolEmitPoint(QgsMapToolEmitPoint):
+	geometryEmitted = pyqtSignal(object)
+
 	def __init__(self, canvas):
-		qgis.gui.QgsMapToolEmitPoint.__init__(self, canvas)
+		QgsMapToolEmitPoint.__init__(self, canvas)
 
 		self.canvas = canvas
 		self.action = None
 
-		QObject.connect(self.canvas, SIGNAL( "mapToolSet(QgsMapTool *)" ), self._toolChanged)
+		self.canvas.mapToolSet.connect(self._toolChanged)
 
 	def deleteLater(self, *args):
-		QObject.disconnect(self.canvas, SIGNAL( "mapToolSet(QgsMapTool *)" ), self._toolChanged)
-		return qgis.gui.QgsMapToolEmitPoint.deleteLater(self, *args)
-
+		self.canvas.mapToolSet.disconnect(self._toolChanged)
+		return QgsMapToolEmitPoint.deleteLater(self, *args)
 
 	def setAction(self, action):
 		self.action = action
@@ -61,9 +64,8 @@ class MapToolEmitPoint(qgis.gui.QgsMapToolEmitPoint):
 		self.canvas.unsetMapTool( self )
 
 	def deactivate(self):
-		if qgis != None:
-			qgis.gui.QgsMapTool.deactivate(self)
-			self.emit(SIGNAL("deactivated()"))
+		QgsMapTool.deactivate(self)
+		self.deactivated.emit()
 
 
 class Drawer(MapToolEmitPoint):
@@ -76,12 +78,11 @@ class Drawer(MapToolEmitPoint):
 		self.action = None
 		self.isEmittingPoints = False
 
-		self.rubberBand = qgis.gui.QgsRubberBand( self.canvas, self.isPolygon )
+		self.rubberBand = qgis.gui.QgsRubberBand( self.canvas, QgsWkbTypes.PolygonGeometry if self.isPolygon else QgsWkbTypes.LineGeometry )
 		self.rubberBand.setColor( self.props.get('color', Qt.red) )
 		self.rubberBand.setWidth( self.props.get('border', 1) )
 
-		self.snapper = qgis.gui.QgsMapCanvasSnapper( self.canvas )
-
+		self.snapper = self.canvas.snappingUtils()
 
 	def deleteLater(self, *args):
 		self.reset()
@@ -89,13 +90,12 @@ class Drawer(MapToolEmitPoint):
 		del self.snapper
 		return MapToolEmitPoint.deleteLater(self, *args)
 
-
 	def setColor(self, color):
 		self.rubberBand.setColor( color )
 
 	def reset(self):
 		self.isEmittingPoints = False
-		self.rubberBand.reset( self.isPolygon )
+		self.rubberBand.reset( QgsWkbTypes.PolygonGeometry if self.isPolygon else QgsWkbTypes.LineGeometry )
 
 	def canvasPressEvent(self, e):
 		if e.button() == Qt.RightButton:
@@ -125,9 +125,9 @@ class Drawer(MapToolEmitPoint):
 		if not self.props.get('enableSnap', True):
 			point = self.toMapCoordinates( e.pos() )
 		else:
-			retval, snapResults = self.snapper.snapToBackgroundLayers( e.pos() )
-			if retval == 0 and len(snapResults) > 0:
-				point = snapResults[0].snappedVertex
+			snapResults = self.snapper.snapToMap( e.pos() )
+			if snapResults.isValid():
+				point = snapResults.point()
 			else:
 				point = self.toMapCoordinates( e.pos() )
 
@@ -146,7 +146,6 @@ class Drawer(MapToolEmitPoint):
 		self.isEmittingPoints = False
 		self.onEnd( self.geometry() )
 
-
 	def isValid(self):
 		return self.rubberBand.numberOfVertices() > 0
 
@@ -160,7 +159,7 @@ class Drawer(MapToolEmitPoint):
 
 	def onEnd(self, geometry):
 		#self.stopCapture()
-		self.emit( SIGNAL( "geometryEmitted" ), geometry )
+		self.geometryEmitted.emit( geometry )
 
 	def deactivate(self):
 		if not self.props.get('keepAfterEnd', False):
@@ -173,9 +172,11 @@ class PolygonDrawer(Drawer):
 	def __init__(self, canvas, props=None):
 		Drawer.__init__(self, canvas, True, props)
 
+
 class LineDrawer(Drawer):
 	def __init__(self, canvas, props=None):
 		Drawer.__init__(self, canvas, False, props)
+
 
 class SegmentDrawer(Drawer):
 	def __init__(self, canvas, props=None):
@@ -186,23 +187,25 @@ class SegmentDrawer(Drawer):
 
 class FeatureFinder(MapToolEmitPoint):
 
+	pointEmitted = pyqtSignal(object, object)
+
 	def __init__(self, canvas):
 		MapToolEmitPoint.__init__(self, canvas)
-		QObject.connect(self, SIGNAL( "canvasClicked(const QgsPoint &, Qt::MouseButton)" ), self.onEnd)
+		self.canvasClicked.connect(self.onEnd)
 
 	def onEnd(self, point, button):
 		self.stopCapture()
-		self.emit( SIGNAL("pointEmitted"), point, button )
+		self.pointEmitted.emit(point, button)
 
 	@classmethod
 	def findAtPoint(self, layer, point, canvas, onlyTheClosestOne=True, onlyIds=False):
 		QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
 
 		# recupera il valore del raggio di ricerca
-		settings = QSettings()
-		radius = settings.value( "/Map/identifyRadius", QGis.DEFAULT_IDENTIFY_RADIUS, type=float)
+		settings = QgsSettings()
+		radius = settings.value( "/Map/searchRadiusMM", Qgis.DEFAULT_SEARCH_RADIUS_MM, type=float)
 		if radius <= 0:
-			radius = QGis.DEFAULT_IDENTIFY_RADIUS
+			radius = Qgis.DEFAULT_SEARCH_RADIUS_MM
 		radius = canvas.extent().width() * radius/100
 
 		# crea il rettangolo da usare per la ricerca
@@ -211,7 +214,7 @@ class FeatureFinder(MapToolEmitPoint):
 		rect.setXMaximum(point.x() + radius)
 		rect.setYMinimum(point.y() - radius)
 		rect.setYMaximum(point.y() + radius)
-		rect = canvas.mapRenderer().mapToLayerCoordinates(layer, rect)
+		rect = canvas.mapSettings().mapToLayerCoordinates(layer, rect)
 
 		# recupera le feature che intersecano il rettangolo
 		ret = None
@@ -257,4 +260,3 @@ class FeatureFinder(MapToolEmitPoint):
 
 		QApplication.restoreOverrideCursor()
 		return ret
-
