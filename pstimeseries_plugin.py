@@ -210,6 +210,8 @@ class PSTimeSeries_Plugin:
 			if not self._askTStablename( ps_layer,  default_tbl_name ):
 				return
 			dsuri.setDataSource( dsuri.schema(), self.ts_tablename, None ) # None or "" ? check during tests
+			dsuri.setWkbType(QgsWkbTypes.Unknown)
+			dsuri.setSrid(None)
 			uri = dsuri.uri()
 
 			# load the layer containing time series
